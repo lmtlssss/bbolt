@@ -1,0 +1,23 @@
+name: bbolt metadata short-write reproduction (no secrets)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-backup-short-writes-20261025
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Check source format
+        run: test -z "$(gofmt -l tx.go tx_short_meta_write_test.go)"
+      - name: Prove full and short writes
+        run: go test -count=1 -run 'TestTx_WriteToRejectsShortMetaWrites|TestTx_WriteToFullWriterStillSucceeds' -v .
+      - name: Check under race detector
+        run: go test -race -count=1 -run 'TestTx_WriteToRejectsShortMetaWrites|TestTx_WriteToFullWriterStillSucceeds' .
