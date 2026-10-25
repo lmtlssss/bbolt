@@ -112,8 +112,17 @@ func TestTx_CopyFileOverwritesUnrelatedDestination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotInfo.Size() != source.Size() {
-		t.Fatalf("backup size = %d, want exact %d", gotInfo.Size(), source.Size())
+	// CopyFile produces the logical transaction size, not the source file's
+	// preallocated file size, which can legitimately be larger.
+	var logicalSize int64
+	if err := db.View(func(tx *bolt.Tx) error {
+		logicalSize = tx.Size()
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if gotInfo.Size() != logicalSize {
+		t.Fatalf("backup size = %d, want exact logical size %d", gotInfo.Size(), logicalSize)
 	}
 	copy, err := bolt.Open(dst, 0600, &bolt.Options{ReadOnly: true})
 	if err != nil {
